@@ -4,6 +4,7 @@
     "autoload": {
         "psr-0": { "basecom\\CronjobBundle": "" }
     },
+    "target-dir": "basecom/CronjobBundle",
     "require": {
         "symfony/symfony": "2.1.*"
     }
