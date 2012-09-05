@@ -2,7 +2,7 @@
     "name": "basecom/cronjob-bundle",
     "description": "Default cronjob bundle",
     "autoload": {
-        "psr-0": { "basecom/CronjobBundle": "" }
+        "psr-0": { "basecom\\CronjobBundle": "" }
     },
     "require": {
         "symfony/symfony": "2.1.*"
