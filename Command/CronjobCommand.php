@@ -55,7 +55,7 @@ abstract class CronjobCommand extends ContainerAwareCommand
 		}
 
 		// get configuration
-		$maxCalls = (int)$input->getOption('maxloops');
+		$maxCalls = max(0, (int)$input->getOption('maxloops'));
 
 		// output settings
 		$this->debug('== Settings ==');
@@ -72,25 +72,35 @@ abstract class CronjobCommand extends ContainerAwareCommand
 
 		// run the loop
 		$loops = 1;
+		$blnMoreLoops = false;
+		$tmpPreloopResultData = null;
 		do
 		{
 			// info
 			$this->debug("--[Loop $loops]--");
 
 			// run cronjob
-			$status = $this->executeCronjob($input, $output, $loops);
+			$result = $this->executeCronjob($input, $output, $loops, $tmpPreloopResultData);
 			$this->debug("\n");
 
-			// sleep to avoid deadlocks
-			sleep(1);
+			// execute more loops?
+			$blnMoreLoops = (false !== $result && $this->checkRuntime($output) && (0 === $maxCalls || $loops <= $maxCalls));
+			if($blnMoreLoops) {
 
-			// increment loop
-			$loops++;
+				// result-data for the next loop available?
+				$tmpPreloopResultData = is_bool($result) ? null : $result;
+				
+				// sleep to avoid deadlocks
+				sleep(1);
+
+				// increment loop
+				$loops++;
+			}
 		}
-		while(false !== $status && $this->checkRuntime($output) && (0 === $maxCalls || $loops <= $maxCalls));
+		while($blnMoreLoops);
 
 		// finish
-		$this->debug("cronjob stopped successfully after ".($loops - 1)." loops\n");
+		$this->debug("cronjob stopped successfully after ".$loops." loops\n");
     }
 
 	/**
@@ -98,10 +108,11 @@ abstract class CronjobCommand extends ContainerAwareCommand
 	 * 
 	 * @param \Symfony\Component\Console\Input\InputInterface $input
 	 * @param \Symfony\Component\Console\Output\OutputInterface $output
-	 * @param Integer $loopcount
+	 * @param Integer $loopcount		Numer of the current loop
+	 * @param Mixed $preloopResult		Returned result of the last executes loop (optional, NOT reliable!)
 	 * @throws \Exception
 	 */
-	protected  function executeCronjob(InputInterface $input, OutputInterface $output, $loopcount)
+	protected  function executeCronjob(InputInterface $input, OutputInterface $output, $loopcount, $preloopResult = null)
 	{
 		throw new \Exception('You have to overwrite this method with your own logic');
 	}
