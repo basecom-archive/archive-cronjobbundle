@@ -10,12 +10,28 @@ use Symfony\Component\Console\Input\InputArgument;
 
 abstract class CronjobCommand extends ContainerAwareCommand
 {
+	/**
+	 * Debugging enabled?
+	 * @var boolean
+	 */
 	protected $debugEnabled;
 
+	/**
+	 * Output interface to use
+	 * @var \Symfony\Component\Console\Output\OutputInterface 
+	 */
 	protected $debugOutput;
 
+	/**
+	 * Maximum runtime in seconds
+	 * @var integer
+	 */
 	protected $runtimeMax;
 
+	/**
+	 * Start-timestamp of the script
+	 * @var integer
+	 */
 	protected $runtimeStart;
 
 	/**
@@ -84,12 +100,12 @@ abstract class CronjobCommand extends ContainerAwareCommand
 			$this->debug("\n");
 
 			// execute more loops?
-			$blnMoreLoops = (false !== $result && $this->checkRuntime($output) && (0 === $maxCalls || $loops <= $maxCalls));
+			$blnMoreLoops = (false !== $result && $this->checkRuntime() && (0 === $maxCalls || $loops <= $maxCalls));
 			if($blnMoreLoops) {
 
 				// result-data for the next loop available?
 				$tmpPreloopResultData = is_bool($result) ? null : $result;
-				
+
 				// sleep to avoid deadlocks
 				sleep(1);
 
@@ -165,17 +181,17 @@ abstract class CronjobCommand extends ContainerAwareCommand
 	/**
 	 * Checks the runtime for this process
 	 * 
-	 * @param \Symfony\Component\Console\Output\OutputInterface $output
 	 * @return boolean
 	 */
-	protected function checkRuntime(OutputInterface $output)
+	protected function checkRuntime()
 	{
-		if(-1 === $this->runtimeMax) {
-			return false;
-		}
-		else if((\time() - $this->runtimeStart) <= $this->runtimeMax) {
+		// infinit time oder within the max-runtime?
+		if(-1 === $this->runtimeMax || ((\time() - $this->runtimeStart) <= $this->runtimeMax)) {
+			// ok, go on
 			return true;
 		}
+
+		// limit reached, stop
 		return	false;
 	}
 }
