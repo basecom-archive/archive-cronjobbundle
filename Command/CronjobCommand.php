@@ -2,11 +2,10 @@
 
 namespace basecom\CronjobBundle\Command;
 
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
+use basecom\WrapperBundle\ContainerAware\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Input\InputArgument;
 
 abstract class CronjobCommand extends ContainerAwareCommand
 {
@@ -18,7 +17,7 @@ abstract class CronjobCommand extends ContainerAwareCommand
 
 	/**
 	 * Output interface to use
-	 * @var \Symfony\Component\Console\Output\OutputInterface 
+	 * @var \Symfony\Component\Console\Output\OutputInterface
 	 */
 	protected $debugOutput;
 
@@ -42,17 +41,6 @@ abstract class CronjobCommand extends ContainerAwareCommand
         $this->addOption('runtime',  't', InputOption::VALUE_OPTIONAL, 'Defines the maximum execution time in seconds (default: 50).', 50)
 			 ->addOption('maxloops', 'l', InputOption::VALUE_OPTIONAL, 'Defines the limit how often the cronjob can be executed within one process (default: no limit).', 0);
     }
-
-	/**
-	 * Container shortcut
-	 * 
-	 * @param string $id
-	 * @return mixed
-	 */
-	protected function get($id)
-	{
-		return $this->getContainer()->get($id);
-	}
 
 	/**
 	 * @{inheritdoc}
@@ -121,7 +109,7 @@ abstract class CronjobCommand extends ContainerAwareCommand
 
 	/**
 	 * Executes the cronjob
-	 * 
+	 *
 	 * @param \Symfony\Component\Console\Input\InputInterface $input
 	 * @param \Symfony\Component\Console\Output\OutputInterface $output
 	 * @param Integer $loopcount		Numer of the current loop
@@ -135,7 +123,7 @@ abstract class CronjobCommand extends ContainerAwareCommand
 
 	/**
 	 * Prepares the debug-output
-	 * 
+	 *
 	 * @param \Symfony\Component\Console\Output\OutputInterface $output
 	 */
 	protected function debugInit(OutputInterface $output)
@@ -151,7 +139,7 @@ abstract class CronjobCommand extends ContainerAwareCommand
 
 	/**
 	 * prints the given data to the console
-	 * 
+	 *
 	 * @param mixed $data	debug data
 	 */
 	protected function debug($data)
@@ -180,7 +168,7 @@ abstract class CronjobCommand extends ContainerAwareCommand
 
 	/**
 	 * Checks the runtime for this process
-	 * 
+	 *
 	 * @return boolean
 	 */
 	protected function checkRuntime()
