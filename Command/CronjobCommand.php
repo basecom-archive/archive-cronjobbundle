@@ -100,7 +100,7 @@ abstract class CronjobCommand extends ContainerAwareCommand
 			$this->debug("\n");
 
 			// execute more loops?
-			$blnMoreLoops = (false !== $result && $this->checkRuntime() && (0 === $maxCalls || $loops <= $maxCalls));
+			$blnMoreLoops = (false !== $result && $this->checkRuntime() && (0 === $maxCalls || ($loops + 1) <= $maxCalls));
 			if($blnMoreLoops) {
 
 				// result-data for the next loop available?
