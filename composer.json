@@ -5,6 +5,12 @@
         "psr-0": { "basecom\\CronjobBundle": "" }
     },
     "target-dir": "basecom/CronjobBundle",
+	"repositories": [
+        {
+            "type": "vcs",
+            "url": "git@git.basecom.de:sf2/bundles/bsc-wrapper-bundle"
+        }
+    ],
     "require": {
         "symfony/symfony": "2.1.*",
         "basecom/wrapper-bundle": "dev-master"
