@@ -34,6 +34,13 @@ abstract class CronjobCommand extends ContainerAwareCommand
 	protected $runtimeStart;
 
 	/**
+	 * Time to sleep between the loops in micro seconds.
+	 * A micro second is one millionth of a second.
+	 * @var integer
+	 */
+	protected $sleeptime = 1000000; // 1 second default
+
+	/**
 	 * @{inheritdoc}
 	 */
 	protected function configure()
@@ -95,7 +102,7 @@ abstract class CronjobCommand extends ContainerAwareCommand
 				$tmpPreloopResultData = is_bool($result) ? null : $result;
 
 				// sleep to avoid deadlocks
-				sleep(1);
+				usleep($this->sleeptime);
 
 				// increment loop
 				$loops++;
