@@ -14,7 +14,7 @@ use basecom\CronjobBundle\Command\CronjobCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class WatcherCommand extends CronjobCommand
+class ExampleCommand extends CronjobCommand
 {
 	protected function configure()
 	{
