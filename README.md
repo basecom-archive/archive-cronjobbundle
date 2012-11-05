@@ -1,6 +1,10 @@
 basecom/CronjobBundle
 =====================
 
+
+	License informations: [LGPL](https://raw.github.com/basecom/CronjobBundle/master/LICENSE)
+
+
 This bundle was made, to create powerfull and efficient cronjobs wich also can use multithreading (requires the php PCNTL-module).
 
 Example
