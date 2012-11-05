@@ -36,6 +36,6 @@ If you trigger this command, you will see the "Hello World!"-output about 50 tim
 
 Documentation
 -------------
-* [Basics](http://github.com/basecom/CronjobBundle/master/docs/01-Basics.md)
-* [Multithreading](http://github.com/basecom/CronjobBundle/master/docs/03-Multithreading.md)
+* [Basics](http://github.com/basecom/CronjobBundle/blob/master/docs/01-Basics.md)
+* [Multithreading](http://github.com/basecom/CronjobBundle/blob/master/docs/03-Multithreading.md)
 

@@ -1,8 +1,9 @@
 Multithreading
 ==============
 
-Importent: For this feature, you need the PCNTL module for PHP.
-To enable the threading you just have the define the amount of threads to use:
+Important: For this feature, you need the PCNTL module for PHP.
+
+To enable the multithreading you just have to define the amount of threads to use:
 
 ``` php
 // ...
