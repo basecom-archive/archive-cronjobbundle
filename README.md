@@ -29,8 +29,9 @@ class WatcherCommand extends CronjobCommand
 	}
 }
 ```
-In this basic configuration, the cronjob will run about 50 seconds, and between each executeCronjob()-call will be one second pause.
-If you trigger this command, you will see the "Hello World"-Output about 50 times.
+In this basic configuration, the cronjob will run about 50 seconds and between each executeCronjob()-call will be a pause of one second.
+
+If you trigger this command, you will see the "Hello World!"-Output about 50 times.
 
 
 Documentation
