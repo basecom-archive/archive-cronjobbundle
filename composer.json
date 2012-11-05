@@ -1,18 +1,24 @@
 {
     "name": "basecom/cronjob-bundle",
-    "description": "Default cronjob bundle",
+    "description": "Bundle to write efficient and threadable cronjobs.",
+	"keywords": ["command", "cronjob", "threadable"],
+	"minimum-stability": "dev",
+	"homepage": "https://github.com/basecom/CronjobBundle",
+	"type": "bundle",
+	"license": "LGPL",
+	"authors": [
+        {
+            "name": "Simon Schröer",
+            "email": "schroeer@basecom.de",
+            "homepage": "http://www.basecom.de/"
+        }
+    ],
+	"require": {
+        "symfony/symfony": "2.1.*",
+        "basecom/wrapper-bundle": "dev-master"
+    },
     "autoload": {
         "psr-0": { "basecom\\CronjobBundle": "" }
     },
-    "target-dir": "basecom/CronjobBundle",
-	"repositories": [
-        {
-            "type": "vcs",
-            "url": "git@git.basecom.de:sf2/bundles/bsc-wrapper-bundle"
-        }
-    ],
-    "require": {
-        "symfony/symfony": "2.1.*",
-        "basecom/wrapper-bundle": "dev-master"
-    }
+    "target-dir": "basecom/CronjobBundle"
 }
