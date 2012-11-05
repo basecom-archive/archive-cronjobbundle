@@ -31,12 +31,11 @@ class ExampleCommand extends CronjobCommand
 ```
 In this basic configuration, the cronjob will run about 50 seconds and between each executeCronjob()-call will be a pause of one second.
 
-If you trigger this command, you will see the "Hello World!"-Output about 50 times.
+If you trigger this command, you will see the "Hello World!"-output about 50 times.
 
 
 Documentation
 -------------
 * [Basics](http://github.com/basecom/CronjobBundle/master/docs/01-Basics.md)
-* [Extended configuration](http://github.com/basecom/CronjobBundle/master/docs/02-Extended.md)
 * [Multithreading](http://github.com/basecom/CronjobBundle/master/docs/03-Multithreading.md)
 
