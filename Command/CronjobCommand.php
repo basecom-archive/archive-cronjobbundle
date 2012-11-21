@@ -170,7 +170,7 @@ abstract class CronjobCommand extends ContainerAwareCommand
 			$this->debug("\n");
 
 			// execute more loops?
-			$blnMoreLoops = (false !== $result && $this->checkRuntime() && (0 === $maxCalls || ($loops + 1) <= $maxCalls));
+			$blnMoreLoops = (false !== $result && $this->checkRuntime($loops) && (0 === $maxCalls || ($loops + 1) <= $maxCalls));
 			if($blnMoreLoops && ((microtime(true) - $microtime) > $this->groupingTime))
 			{
 				// result-data for the next loop available?
@@ -256,10 +256,14 @@ abstract class CronjobCommand extends ContainerAwareCommand
 	 *
 	 * @return boolean
 	 */
-	protected function checkRuntime()
+	protected function checkRuntime($loops)
 	{
-		// infinit time oder within the max-runtime?
-		if(-1 === $this->runtimeMax || ((\time() - $this->runtimeStart) <= $this->runtimeMax)) {
+		// enough time for one more loop to finish?
+		$currentRuntime    = (\time() - $this->runtimeStart);
+		$avgRuntimePerLoop = ceil($currentRuntime / $loops);
+
+		// infinit time or within the max-runtime?
+		if(-1 === $this->runtimeMax || (($currentRuntime + $avgRuntimePerLoop) <= $this->runtimeMax)) {
 			// ok, go on
 			return true;
 		}
