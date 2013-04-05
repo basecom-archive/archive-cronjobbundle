@@ -157,7 +157,6 @@ abstract class CronjobCommand extends ContainerAwareCommand
 
 		// run the loop
 		$loops = 1;
-		$blnMoreLoops = false;
 		$tmpPreloopResultData = null;
 		$microtime = microtime(true);
 		do
@@ -251,11 +250,12 @@ abstract class CronjobCommand extends ContainerAwareCommand
 		}
 	}
 
-	/**
-	 * Checks the runtime for this process
-	 *
-	 * @return boolean
-	 */
+    /**
+     * Checks the runtime for this process
+     *
+     * @param int $loops
+     * @return boolean
+     */
 	protected function checkRuntime($loops)
 	{
 		// enough time for one more loop to finish?
