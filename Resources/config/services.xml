@@ -4,11 +4,4 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
 
-    <parameters>
-        <parameter key="basecom_cronjob.userInputService.class">basecom\CronjobBundle\Services\UserInputService</parameter>
-    </parameters>
-
-    <services>
-        <service id="bsc.cronjobBundle.userInput" class="%basecom_cronjob.userInputService.class%"></service>
-    </services>
 </container>
