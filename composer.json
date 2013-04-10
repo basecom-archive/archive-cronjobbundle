@@ -15,7 +15,7 @@
     ],
 	"require": {
         "symfony/symfony": "2.1.*",
-        "basecom/wrapper-bundle": "dev-master"
+        "basecom/wrapper-bundle": "1.*"
     },
     "autoload": {
         "psr-0": { "basecom\\CronjobBundle": "" }
