@@ -10,10 +10,6 @@ use Symfony\Component\Console\Input\InputOption;
 
 abstract class CronjobCommand extends ContainerAwareCommand
 {
-	const THREAD_CHILD  = 'child';
-	const THREAD_PARENT = 'parent';
-	const THREAD_ERROR  = 'error';
-
 	/**
 	 * Debugging enabled?
 	 * @var boolean
@@ -58,24 +54,6 @@ abstract class CronjobCommand extends ContainerAwareCommand
 	 */
 	protected $threads = 1;
 
-	/**
-	 * Contains the thread process ids if threadding is enabled
-	 * @var Array
-	 */
-	protected $threadPids = array();
-
-	/**
-	 * Contains the thread signals
-	 * @var Array
-	 */
-	protected $threadSignalQue = array();
-
-	/**
-	 * Flag to define that i am a thread child
-	 * @var boolean
-	 */
-	protected $threadChild = false; // don't overwrite this!
-	
 	/**
 	 * @{inheritdoc}
 	 */
@@ -343,109 +321,5 @@ abstract class CronjobCommand extends ContainerAwareCommand
 
 		// limit reached, stop
 		return false;
-	}
-
-	/**
-	 * Creates a new thread of this script instance
-	 * 
-	 * @return string	self::THREAD_*-status
-	 */
-	protected function createThread()
-	{
-		$childPid = pcntl_fork();
-		if(-1 === $childPid)
-		{
-			// error
-			return self::THREAD_ERROR;
-		}
-		else if($childPid)
-		{
-			// save child pid and status-pointer
-			$this->threadPids[$childPid] = 1;
-
-			// In the event that a signal for this pid was caught before we get here, it will be in our signalQueue array
-            // So let's go ahead and process it now as if we'd just received the signal
-            if(isset($this->threadSignalQue[$childPid])) {
-                $this->childSignalHandler(\SIGCHLD, $childPid, $this->threadSignalQue[$childPid]);
-                unset($this->threadSignalQue[$childPid]);
-            }
-
-			// we are the parent
-			return self::THREAD_PARENT;
-		}
-		else
-		{
-			// disable debug mode
-			$this->debugEnabled = false;
-
-			// mark this instance as child
-			$this->threadChild = true;
-
-			//prevent output to main process
-			ob_start();
-
-			//to kill self before exit();, or else the resource shared with parent will be closed 
-            register_shutdown_function(create_function('$pars', 'ob_end_clean();posix_kill(getmypid(), SIGKILL);'), array());
-
-			// we are the child
-			return self::THREAD_CHILD;
-		}
-	}
-
-	/**
-	 * Watches the threads and prints some informations about them
-	 */
-	protected function watchThreads()
-	{
-		// print some debug informations
-		$this->debug("\nSpawned threads: ".count($this->threadPids)."\n");
-
-		// wait until all threads are done
-		while(!empty($this->threadPids)) {
-			$pid = pcntl_wait($status);
-			$this->threadSignalHandler(0, $pid, $status);
-		}
-	}
-
-	/**
-	 * Signal handler for threads
-	 * 
-	 * @param integer $signo
-	 * @param integer $pid
-	 * @param integer $status
-	 * @return boolean
-	 */
-	protected function threadSignalHandler($signo, $pid=null, $status=null)
-	{
-		// if no pid is provided, that means we're getting the signal from the system.
-        // let's figure out which child process ended.
-        if(!$pid) {
-            $pid = pcntl_waitpid(-1, $status, \WNOHANG);
-        }
-
-		// make sure we get all of the exited children
-        while($pid > 0)
-		{
-            if(isset($this->threadPids[$pid])) {
-                $exitCode = pcntl_wexitstatus($status);
-                $this->debug("pid $pid exited with status $exitCode");
-                unset($this->threadPids[$pid]);
-            }
-            else {
-                $this->threadSignalQue[$pid] = $status;
-            }
-            $pid = pcntl_waitpid(-1, $status, \WNOHANG);
-        }
-        return true;
-	}
-
-	/**
-	 * Returns true if we are in a child-thread
-	 * 
-	 * @return boolean
-	 */
-	protected function isChildThread()
-	{
-		return (true === $this->threadChild);
 	}
 }
