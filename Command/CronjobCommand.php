@@ -3,16 +3,13 @@
 namespace basecom\CronjobBundle\Command;
 
 use basecom\WrapperBundle\ContainerAware\ContainerAwareCommand;
+use sweikenb\Library\Threading\Thread;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputOption;
 
 abstract class CronjobCommand extends ContainerAwareCommand
 {
-	const THREAD_CHILD  = 'child';
-	const THREAD_PARENT = 'parent';
-	const THREAD_ERROR  = 'error';
-
 	/**
 	 * Debugging enabled?
 	 * @var boolean
@@ -58,31 +55,13 @@ abstract class CronjobCommand extends ContainerAwareCommand
 	protected $threads = 1;
 
 	/**
-	 * Contains the thread process ids if threadding is enabled
-	 * @var Array
-	 */
-	protected $threadPids = array();
-
-	/**
-	 * Contains the thread signals
-	 * @var Array
-	 */
-	protected $threadSignalQue = array();
-
-	/**
-	 * Flag to define that i am a thread child
-	 * @var boolean
-	 */
-	protected $threadChild = false; // don't overwrite this!
-	
-	/**
 	 * @{inheritdoc}
 	 */
 	protected function configure()
     {
         $this->addOption('runtime',  't', InputOption::VALUE_OPTIONAL, 'Defines the maximum execution time in seconds (default: 50).', 50)
 			 ->addOption('maxloops', 'l', InputOption::VALUE_OPTIONAL, 'Defines the limit how often the cronjob can be executed within one process (default: no limit).', 0)
-			 ->addOption('threads', 'x', InputOption::VALUE_OPTIONAL, 'Defines how many threads should be spawned (default: no threads).', 0);
+			 ->addOption('threads',  'x', InputOption::VALUE_OPTIONAL, 'Defines how many threads should be spawned (default: no threads).', 0);
     }
 
 	/**
@@ -102,14 +81,15 @@ abstract class CronjobCommand extends ContainerAwareCommand
 		}
 
 		// get thread-count
-		$this->threads = max(0, (int)$input->getOption('threads'));
+		$this->threads = \max(0, (int)$input->getOption('threads'));
 		
 		// get configuration
-		$maxCalls = max(0, (int)$input->getOption('maxloops'));
+		$maxCalls = \max(0, (int)$input->getOption('maxloops'));
 
 		// output settings
 		$this->debug('== Settings ==');
-		if($this->debugEnabled) {
+		if($this->debugEnabled)
+        {
 			$settings = $input->getOptions();
 			foreach($settings as $option => $value)
 			{
@@ -123,72 +103,133 @@ abstract class CronjobCommand extends ContainerAwareCommand
 		// threadding?
 		if($this->threads > 1)
 		{
-			if(!function_exists('pcntl_fork'))
-			{
-				$this->debug("\nHINT: Can't use threading due to missing pcntl module.\n\n");
-			}
-			else
-			{
-				// set signal handler
-				pcntl_signal(\SIGCHLD, array($this, "threadSignalHandler"));
-				$child = false;
-				for($i = 0; $i < $this->threads; $i++)
-				{
-					// spawn childs
-					if($this->createThread() === self::THREAD_CHILD)
-					{
-						// stop loop to prevent endless spawning of childs on sub-threads
-						$child = true;
-						break;
-					}
-				}
+            // debug
+            $output->writeln(\sprintf("Threading triggerd. Starting to spawn <comment>%s</comment> threads ...", $this->threads));
 
-				// if we are the parent, we only need to check te thread status
-				if(!$child && count($this->threadPids) > 0)
-				{
-					// watch threads and output some informations
-					$this->watchThreads();
+            // create requested threads
+			$childs = array();
+            for($i = 0; $i < $this->threads; $i++)
+            {
+                // spawn new thread
+                $pid = Thread::getInstance()->spawn(array($this, 'executeSingleInstance'), array($input, $output, $maxCalls))->getPid();
 
-					// exit script, only the childs will execute loops
-					exit;
-				}
-			}
+                // register pid
+                $childs[$pid] = 1;
+
+                // debug
+                $output->writeln(\sprintf("--> Cronjob thread spawned: <info>%s</info>", $pid));
+            }
+
+            // add an 10% buffer to wait for all childs
+            if($this->runtimeMax > 0) {
+                $this->runtimeMax += \ceil(($this->runtimeMax / 100) * 110);
+            }
+
+            // wait for childs to exit
+            $output->writeln("Start waiting for childs to finish ...");
+            while(\count($childs) > 0 && $this->checkRuntime(-1))
+            {
+                $pid = (int)\pcntl_wait($status, \WNOHANG);
+                if($pid > 0) {
+                    unset($childs[$pid]);
+                    $output->writeln(\sprintf("--> Thread <info>%s</info> finished", $pid));
+                }
+                else {
+                    \usleep(500);
+                }
+            }
+
+            // return status based on the child count
+            return (\count($childs) === 0 ? 0 : 1);
 		}
+        else
+        {
+            // execute an single instance and return its status
+            return $this->executeSingleInstance(null, $input, $output, $maxCalls);
+        }
+    }
 
-		// run the loop
-		$loops = 1;
-		$tmpPreloopResultData = null;
-		$microtime = microtime(true);
-		do
-		{
-			// info
-			$this->debug("--[Loop $loops]--");
+    /**
+     * @param Thread $thread
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     */
+    protected function onThreadSpawned(Thread $thread, InputInterface $input, OutputInterface $output)
+    {
+        // refresh database connections / resources at this point ...
+    }
 
-			// run cronjob
-			$result = $this->executeCronjob($input, $output, $loops, $tmpPreloopResultData);
-			$this->debug("\n");
+    /**
+     * @param Thread $thread
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     */
+    protected function onThreadTerminating(Thread $thread, InputInterface $input, OutputInterface $output)
+    {
+        // close database connections / resources at this point ...
+    }
 
-			// execute more loops?
-			$blnMoreLoops = (false !== $result && $this->checkRuntime($loops) && (0 === $maxCalls || ($loops + 1) <= $maxCalls));
-			if($blnMoreLoops && ((microtime(true) - $microtime) > $this->groupingTime))
-			{
-				// result-data for the next loop available?
-				$tmpPreloopResultData = is_bool($result) ? null : $result;
+    /**
+     * @param Thread $thread
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @param int $maxCalls
+     * @return int
+     */
+    public function executeSingleInstance(Thread $thread = null, InputInterface $input, OutputInterface $output, $maxCalls)
+    {
+        // threaded call?
+        if(null !== $thread) {
+            $this->onThreadSpawned($thread, $input, $output);
+        }
 
-				// sleep to avoid deadlocks
-				usleep($this->sleeptime);
+        // run the loop
+        $loops = 1;
+        $tmpPreloopResultData = null;
+        $microtime = microtime(true);
+        do
+        {
+            // info
+            $this->debug("--[Loop $loops]--");
 
-				// set new compare-microtime
-				$microtime = microtime(true);
+            // run cronjob
+            $result = $this->executeCronjob($input, $output, $loops, $tmpPreloopResultData);
+            $this->debug("\n");
 
-				// increment loop
-				$loops++;
-			}
-		}
-		while($blnMoreLoops);
+            // execute more loops?
+            $blnMoreLoops = (false !== $result && $this->checkRuntime($loops) && (0 === $maxCalls || ($loops + 1) <= $maxCalls));
+            if($blnMoreLoops && ((microtime(true) - $microtime) > $this->groupingTime))
+            {
+                // result-data for the next loop available?
+                $tmpPreloopResultData = is_bool($result) ? null : $result;
 
-		// finish
-		$this->debug("cronjob stopped successfully after ".$loops." loops\n");
+                // sleep to avoid deadlocks
+                usleep($this->sleeptime);
+
+                // set new compare-microtime
+                $microtime = microtime(true);
+
+                // increment loop
+                $loops++;
+            }
+        }
+        while($blnMoreLoops);
+
+        // finish
+        $this->debug("cronjob stopped successfully after ".$loops." loops\n");
+
+        // threaded call?
+        if(null !== $thread)
+        {
+            // trigger event callback
+            $this->onThreadTerminating($thread, $input, $output);
+
+            // if this is an threaded run, we have to terminate the call
+            $thread->terminate();
+        }
+
+        // return exit status
+        return 0;
     }
 
 	/**
@@ -200,7 +241,7 @@ abstract class CronjobCommand extends ContainerAwareCommand
 	 * @param Mixed $preloopResult		Returned result of the last executes loop (optional, NOT reliable!)
 	 * @throws \Exception
 	 */
-	protected  function executeCronjob(InputInterface $input, OutputInterface $output, $loopcount, $preloopResult = null)
+	protected function executeCronjob(InputInterface $input, OutputInterface $output, $loopcount, $preloopResult = null)
 	{
 		throw new \Exception('You have to overwrite this method with your own logic');
 	}
@@ -258,121 +299,27 @@ abstract class CronjobCommand extends ContainerAwareCommand
      */
 	protected function checkRuntime($loops)
 	{
-		// enough time for one more loop to finish?
-		$currentRuntime    = (\time() - $this->runtimeStart);
-		$avgRuntimePerLoop = ceil($currentRuntime / $loops);
+        // infinit time?
+        if(-1 === $this->runtimeMax) {
+            return true;
+        }
 
-		// infinit time or within the max-runtime?
-		if(-1 === $this->runtimeMax || (($currentRuntime + $avgRuntimePerLoop) <= $this->runtimeMax)) {
+		// get the current runtime
+		$currentRuntime = (\time() - $this->runtimeStart);
+
+        // ignore loop count?
+        if(-1 === $loops) {
+            return ($currentRuntime < $this->runtimeMax);
+        }
+
+		// enough time for the next loop?
+        $avgRuntimePerLoop = \ceil($currentRuntime / $loops);
+		if((($currentRuntime + $avgRuntimePerLoop) <= $this->runtimeMax)) {
 			// ok, go on
 			return true;
 		}
 
 		// limit reached, stop
-		return	false;
-	}
-
-	/**
-	 * Creates a new thread of this script instance
-	 * 
-	 * @return string	self::THREAD_*-status
-	 */
-	protected function createThread()
-	{
-		$childPid = pcntl_fork();
-		if(-1 === $childPid)
-		{
-			// error
-			return self::THREAD_ERROR;
-		}
-		else if($childPid)
-		{
-			// save child pid and status-pointer
-			$this->threadPids[$childPid] = 1;
-
-			// In the event that a signal for this pid was caught before we get here, it will be in our signalQueue array
-            // So let's go ahead and process it now as if we'd just received the signal
-            if(isset($this->threadSignalQue[$childPid])) {
-                $this->childSignalHandler(\SIGCHLD, $childPid, $this->threadSignalQue[$childPid]);
-                unset($this->threadSignalQue[$childPid]);
-            }
-
-			// we are the parent
-			return self::THREAD_PARENT;
-		}
-		else
-		{
-			// disable debug mode
-			$this->debugEnabled = false;
-
-			// mark this instance as child
-			$this->threadChild = true;
-
-			//prevent output to main process
-			ob_start();
-
-			//to kill self before exit();, or else the resource shared with parent will be closed 
-            register_shutdown_function(create_function('$pars', 'ob_end_clean();posix_kill(getmypid(), SIGKILL);'), array());
-
-			// we are the child
-			return self::THREAD_CHILD;
-		}
-	}
-
-	/**
-	 * Watches the threads and prints some informations about them
-	 */
-	protected function watchThreads()
-	{
-		// print some debug informations
-		$this->debug("\nSpawned threads: ".count($this->threadPids)."\n");
-
-		// wait until all threads are done
-		while(!empty($this->threadPids)) {
-			$pid = pcntl_wait($status);
-			$this->threadSignalHandler(0, $pid, $status);
-		}
-	}
-
-	/**
-	 * Signal handler for threads
-	 * 
-	 * @param integer $signo
-	 * @param integer $pid
-	 * @param integer $status
-	 * @return boolean
-	 */
-	protected function threadSignalHandler($signo, $pid=null, $status=null)
-	{
-		// if no pid is provided, that means we're getting the signal from the system.
-        // let's figure out which child process ended.
-        if(!$pid) {
-            $pid = pcntl_waitpid(-1, $status, \WNOHANG);
-        }
-
-		// make sure we get all of the exited children
-        while($pid > 0)
-		{
-            if(isset($this->threadPids[$pid])) {
-                $exitCode = pcntl_wexitstatus($status);
-                $this->debug("pid $pid exited with status $exitCode");
-                unset($this->threadPids[$pid]);
-            }
-            else {
-                $this->threadSignalQue[$pid] = $status;
-            }
-            $pid = pcntl_waitpid(-1, $status, \WNOHANG);
-        }
-        return true;
-	}
-
-	/**
-	 * Returns true if we are in a child-thread
-	 * 
-	 * @return boolean
-	 */
-	protected function isChildThread()
-	{
-		return (true === $this->threadChild);
+		return false;
 	}
 }
