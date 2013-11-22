@@ -54,6 +54,18 @@ abstract class CronjobCommand extends ContainerAwareCommand
 	 */
 	protected $threads = 1;
 
+    /**
+     * Enables the singletion mode for this command so this cronjob will stop if an other instance is already running.
+     * @var bool
+     */
+    protected $singletonMode = false;
+
+    /**
+     * Timeout until this cronjob will be unlocked if an unexpacked / unhandled error occures
+     * @var int
+     */
+    protected $singletonTimeout = 3600; // 1h
+
 	/**
 	 * @{inheritdoc}
 	 */
@@ -103,6 +115,11 @@ abstract class CronjobCommand extends ContainerAwareCommand
 		// threadding?
 		if($this->threads > 1)
 		{
+            // logical error?
+            if(true === $this->singletonMode) {
+                throw new \LogicException("You can't use threading for singletion-commands!");
+            }
+
             // debug
             $output->writeln(\sprintf("Threading triggerd. Starting to spawn <comment>%s</comment> threads ...", $this->threads));
 
@@ -144,9 +161,80 @@ abstract class CronjobCommand extends ContainerAwareCommand
 		}
         else
         {
-            // execute an single instance and return its status
-            return $this->executeSingleInstance(null, $input, $output, $maxCalls);
+            // get the cronjob manager
+            $cronjobManager = $this->getContainer()->get('bsc.cronjob.manager');
+
+            // singleton mode activated?
+            if(true === $this->singletonMode)
+            {
+                // try to lock this instance
+                if(!$cronjobManager->lockCronjobCommand($this))
+                {
+                    // feedback for the user
+                    $output->writeln("--> <comment>Singleton warning:</comment> An other instance of this command is already running.");
+                    $output->writeln("--> <info>Stopped.</info>");
+
+                    // stop this instance
+                    return 0;
+                }
+            }
+
+            try
+            {
+                // execute an single instance and return its status
+                $status = (int)$this->executeSingleInstance(null, $input, $output, $maxCalls);
+            }
+            catch(\Exception $e)
+            {
+                // need to unlock the cronjob?
+                if(true === $this->singletonMode) {
+                    $cronjobManager->unlockCronjobCommand($this);
+                }
+
+                // throw on
+                throw $e;
+            }
+
+            // need to unlock the cronjob?
+            if(true === $this->singletonMode) {
+                $cronjobManager->unlockCronjobCommand($this);
+            }
+
+            // return command status
+            return $status;
         }
+    }
+
+    /**
+     * @param int $singletonTimeout
+     */
+    public function setSingletonTimeout($singletonTimeout)
+    {
+        $this->singletonTimeout = $singletonTimeout;
+    }
+
+    /**
+     * @return int
+     */
+    public function getSingletonTimeout()
+    {
+        return $this->singletonTimeout;
+    }
+
+    /**
+     * @param boolean $singletonMode
+     */
+    public function setSingletonMode($singletonMode)
+    {
+        $this->singletonMode = $singletonMode;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getSingletonMode()
+    {
+        return $this->singletonMode;
     }
 
     /**
