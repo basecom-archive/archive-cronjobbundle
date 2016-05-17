@@ -15,8 +15,7 @@
     ],
 	"require": {
         "symfony/symfony": ">=2.3,<3.0",
-        "basecom/wrapper-bundle": ">=2.3,<3.0",
-        "sweikenb/php-library": ">=2.3,<3.0"
+        "basecom/wrapper-bundle": ">=2.3,<3.0"
     },
     "autoload": {
         "psr-0": { "basecom\\CronjobBundle": "" }
