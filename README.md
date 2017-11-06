@@ -36,6 +36,15 @@ In this basic configuration, the cronjob will run about 50 seconds and between e
 
 If you trigger this command, you will see the "Hello World!"-output about 50 times.
 
+Crontab handling
+----------------
+You can use the bundle for cronjob handling. Then you kann use the `bsc:cronjob:produce` for a worker to handle your comands via config.
+```
+basecom_cronjob:
+    cronjobs:
+        - {schedule: '* 5-23 * * *', script: 'app/console app:my:command --no-debug > /dev/null 2>&1'}
+```
+And add the Script to your crontab to run 5 minutes for example `app/console bsc:cronjob:produce -t=255 --no-debug > /dev/` or add the command to your worker config.
 
 Documentation
 -------------
