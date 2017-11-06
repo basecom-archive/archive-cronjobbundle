@@ -44,7 +44,7 @@ basecom_cronjob:
     cronjobs:
         - {schedule: '* 5-23 * * *', script: 'app/console app:my:command --no-debug > /dev/null 2>&1'}
 ```
-And add the Script to your crontab to run 5 minutes for example `app/console bsc:cronjob:produce -t=255 --no-debug > /dev/` or add the command to your worker config.
+And add the Script to your crontab to run 5 minutes for example `app/console bsc:cronjob:produce -t=255 --no-debug > /dev/null 2>&1` or add the command to your worker config.
 
 Documentation
 -------------
