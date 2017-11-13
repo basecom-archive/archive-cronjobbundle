@@ -44,12 +44,8 @@ class CronjobProducerCommand extends CronjobCommand
         foreach ($cronjobs as $cronjob) {
             $cron = CronExpression::factory($cronjob['schedule']);
             if ($cron->isDue()) {
-                $processBuilder = new ProcessBuilder();
-                $processBuilder->add($cronjob['script']);
-                $process = $processBuilder->getProcess();
-                $output->write('Starting process ' . $cronjob['script']);
-                $process->start();
-                $output->writeln(' (pid: ' . $process->getPid() . ')');
+                $output->writeln('Starting process ' . $cronjob['script']);
+                exec($cronjob['script'] . ' &');
             }
         }
 

@@ -11,6 +11,10 @@
             "name": "Simon Schröer",
             "email": "schroeer@basecom.de",
             "homepage": "http://www.basecom.de/"
+        },
+        {
+            "name": "Maximilian Beckers",
+            "email": "beckers@basecom.de"
         }
     ],
 	"require": {
