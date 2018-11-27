@@ -2,8 +2,8 @@
 
 namespace basecom\CronjobBundle\Command;
 
-use basecom\WrapperBundle\ContainerAware\ContainerAwareCommand;
 use sweikenb\Library\Threading\Thread;
+use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputOption;
